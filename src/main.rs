@@ -9,7 +9,7 @@ type DayAction = fn(&Path, i64) -> i64;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[clap(long, short, action, default_value_t = 2025)]
+    #[clap(long, short, action, default_value_t = 2024)]
     year: i64,
 
     #[clap(long, short, action)]
