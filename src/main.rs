@@ -2,7 +2,7 @@ use std::path::{Path, PathBuf};
 
 use clap::Parser;
 
-mod twentyfive;
+mod twentyfour;
 
 type DayAction = fn(&Path, i64) -> i64;
 
@@ -25,6 +25,7 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
+    println!("{:?}", args);
     let data_path = get_data_path(args.year, args.day, args.test);
     let action = get_day(args.year, args.day);
 
@@ -35,8 +36,9 @@ fn main() {
 
 fn get_day(year: i64, day: i64) -> DayAction {
     match year {
-        2025 => match day {
-            1 => twentyfive::one,
+        2024 => match day {
+            1 => twentyfour::one,
+            2 => twentyfour::two,
             _ => unimplemented!(),
         },
         _ => unimplemented!(),
