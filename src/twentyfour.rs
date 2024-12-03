@@ -4,6 +4,149 @@ use std::{
     path::Path,
 };
 
+#[derive(Debug)]
+enum MulParserState {
+    Start,
+    M,
+    U,
+    L,
+    LeftParen,
+    Left(String),
+    Comma,
+    Right(String),
+    D,
+    O,
+    N,
+    Apostrophe,
+}
+
+#[derive(Debug)]
+struct MulParser {
+    data: Vec<char>,
+
+    position: usize,
+    state: MulParserState,
+    mulEnabled: bool,
+
+    left: i64,
+}
+
+impl MulParser {
+    fn new(data: Vec<char>) -> Self {
+        Self {
+            data,
+            position: 0,
+            state: MulParserState::Start,
+            mulEnabled: true,
+            left: 0,
+        }
+    }
+
+    fn is_at_end(&self) -> bool {
+        self.position >= self.data.len()
+    }
+
+    fn next(&mut self) -> Option<i64> {
+        match &self.state {
+            MulParserState::Start => match self.data[self.position] {
+                'm' => self.state = MulParserState::M,
+                'd' => self.state = MulParserState::D,
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::M => match self.data[self.position] {
+                'u' => self.state = MulParserState::U,
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::U => match self.data[self.position] {
+                'l' => self.state = MulParserState::L,
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::L => match self.data[self.position] {
+                '(' => self.state = MulParserState::LeftParen,
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::LeftParen => match self.data[self.position] {
+                c if c.is_numeric() => self.state = MulParserState::Left(c.to_string()),
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::Left(s) => match self.data[self.position] {
+                ',' => {
+                    self.left = s.parse().unwrap();
+                    self.state = MulParserState::Comma;
+                }
+                c if c.is_numeric() => {
+                    self.state = MulParserState::Left(s.to_owned() + &c.to_string())
+                }
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::Comma => match self.data[self.position] {
+                c if c.is_numeric() => self.state = MulParserState::Right(c.to_string()),
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::Right(s) => match self.data[self.position] {
+                ')' => {
+                    let right: i64 = s.parse().unwrap();
+                    self.state = MulParserState::Start;
+                    self.position += 1;
+
+                    return Some(self.left * right);
+                }
+                c if c.is_numeric() => {
+                    self.state = MulParserState::Right(s.to_owned() + &c.to_string())
+                }
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::D => match self.data[self.position] {
+                'o' => self.state = MulParserState::O,
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::O => match self.data[self.position] {
+                'n' => self.state = MulParserState::N,
+                '(' => {
+                    if self.data[self.position + 1] == ')' {
+                        self.mulEnabled = true;
+                    }
+                }
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::N => match self.data[self.position] {
+                '\'' => self.state = MulParserState::Apostrophe,
+                _ => self.state = MulParserState::Start,
+            },
+            MulParserState::Apostrophe => match self.data[self.position] {
+                't' => {
+                    if self.data[self.position + 1] == '(' && self.data[self.position + 2] == ')' {
+                        self.mulEnabled = false;
+                    }
+                }
+                _ => self.state = MulParserState::Start,
+            },
+        };
+
+        self.position += 1;
+        None
+    }
+}
+
+pub fn three(data: &Path, part: i64) -> i64 {
+    let chars = fs::read_to_string(data)
+        .expect("should be able to read data")
+        .chars()
+        .collect();
+    let mut parser = MulParser::new(chars);
+
+    let mut total = 0;
+    while !parser.is_at_end() {
+        if let Some(mul) = parser.next() {
+            if part == 1 || parser.mulEnabled {
+                total += mul;
+            }
+        }
+    }
+
+    total
+}
+
 pub fn two(data: &Path, part: i64) -> i64 {
     fn safe_p1(report: Vec<i64>) -> bool {
         if report[0] == report[1] {
