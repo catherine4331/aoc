@@ -1,8 +1,120 @@
 use std::{
     collections::HashMap,
     fs::{self},
+    ops::Index,
     path::Path,
 };
+
+#[derive(Debug)]
+enum Direction {
+    Up,
+    UpRight,
+    Right,
+    DownRight,
+    Down,
+    DownLeft,
+    Left,
+    UpLeft,
+}
+
+impl Direction {
+    fn get_index(&self, x: i64, y: i64, n: i64) -> (i64, i64) {
+        match self {
+            Direction::Up => (x - n, y),
+            Direction::Down => (x + n, y),
+            Direction::UpRight => (x - n, y + n),
+            Direction::UpLeft => (x - n, y - n),
+            Direction::DownRight => (x + n, y + n),
+            Direction::DownLeft => (x + n, y - n),
+            Direction::Right => (x, y + n),
+            Direction::Left => (x, y - n),
+        }
+    }
+}
+
+static DIRECTIONS: [Direction; 8] = [
+    Direction::Up,
+    Direction::UpRight,
+    Direction::Right,
+    Direction::DownRight,
+    Direction::Down,
+    Direction::DownLeft,
+    Direction::Left,
+    Direction::UpLeft,
+];
+
+struct WordSearch {
+    board: Vec<char>,
+
+    x: usize,
+    y: usize,
+}
+
+impl WordSearch {
+    fn new(raw_board: String) -> Self {
+        let rows: Vec<&str> = raw_board.split("\n").collect();
+        let t = rows.iter().map(|r| r.chars()).flat_map(|c| c).collect();
+
+        Self {
+            board: t,
+            x: rows.len(),
+            y: rows[0].len(),
+        }
+    }
+
+    fn check_square(&self, x: i64, y: i64) -> i64 {
+        if self[(x, y)] != 'X' {
+            return 0;
+        }
+
+        DIRECTIONS
+            .iter()
+            .map(|d| {
+                self[d.get_index(x, y, 1)] == 'M'
+                    && self[d.get_index(x, y, 2)] == 'A'
+                    && self[d.get_index(x, y, 3)] == 'S'
+            })
+            .fold(0, |acc, b| if b { acc + 1 } else { acc })
+    }
+
+    fn check_squares(&self) -> i64 {
+        (0..self.x as i64)
+            .map(|x| {
+                (0..self.y as i64)
+                    .map(|y| self.check_square(x, y))
+                    .sum::<i64>()
+            })
+            .sum()
+    }
+}
+
+impl Index<(i64, i64)> for WordSearch {
+    type Output = char;
+
+    fn index(&self, index: (i64, i64)) -> &Self::Output {
+        let x = match usize::try_from(index.0) {
+            Ok(x) => x,
+            Err(_) => return &'e',
+        };
+        let y = match usize::try_from(index.1) {
+            Ok(y) => y,
+            Err(_) => return &'e',
+        };
+
+        if x >= self.x || y >= self.y {
+            return &'e';
+        }
+
+        &self.board[(x * self.y) + y]
+    }
+}
+
+pub fn four(data: &Path, part: i64) -> i64 {
+    let wordsearch =
+        WordSearch::new(fs::read_to_string(data).expect("should be able to read data"));
+
+    wordsearch.check_squares()
+}
 
 #[derive(Debug)]
 enum MulParserState {
@@ -26,7 +138,7 @@ struct MulParser {
 
     position: usize,
     state: MulParserState,
-    mulEnabled: bool,
+    mul_enabled: bool,
 
     left: i64,
 }
@@ -37,7 +149,7 @@ impl MulParser {
             data,
             position: 0,
             state: MulParserState::Start,
-            mulEnabled: true,
+            mul_enabled: true,
             left: 0,
         }
     }
@@ -104,7 +216,7 @@ impl MulParser {
                 'n' => self.state = MulParserState::N,
                 '(' => {
                     if self.data[self.position + 1] == ')' {
-                        self.mulEnabled = true;
+                        self.mul_enabled = true;
                     }
                 }
                 _ => self.state = MulParserState::Start,
@@ -116,7 +228,7 @@ impl MulParser {
             MulParserState::Apostrophe => match self.data[self.position] {
                 't' => {
                     if self.data[self.position + 1] == '(' && self.data[self.position + 2] == ')' {
-                        self.mulEnabled = false;
+                        self.mul_enabled = false;
                     }
                 }
                 _ => self.state = MulParserState::Start,
@@ -138,7 +250,7 @@ pub fn three(data: &Path, part: i64) -> i64 {
     let mut total = 0;
     while !parser.is_at_end() {
         if let Some(mul) = parser.next() {
-            if part == 1 || parser.mulEnabled {
+            if part == 1 || parser.mul_enabled {
                 total += mul;
             }
         }

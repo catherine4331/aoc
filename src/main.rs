@@ -25,7 +25,6 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    println!("{:?}", args);
     let data_path = get_data_path(args.year, args.day, args.test);
     let action = get_day(args.year, args.day);
 
@@ -40,6 +39,7 @@ fn get_day(year: i64, day: i64) -> DayAction {
             1 => twentyfour::one,
             2 => twentyfour::two,
             3 => twentyfour::three,
+            4 => twentyfour::four,
             _ => unimplemented!(),
         },
         _ => unimplemented!(),
