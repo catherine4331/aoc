@@ -1,10 +1,106 @@
 use std::{
+    cmp,
     collections::HashMap,
     fs::{self},
     ops::Index,
     path::Path,
-    thread::panicking,
 };
+
+#[derive(PartialEq, Eq)]
+struct PageNumber<'a> {
+    number: i64,
+    orderings: &'a HashMap<i64, Vec<i64>>,
+    reverse_orderings: &'a HashMap<i64, Vec<i64>>,
+}
+
+impl<'a> PartialOrd for PageNumber<'a> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if let Some(o) = self.orderings.get(&self.number) {
+            if o.contains(&other.number) {
+                return Some(std::cmp::Ordering::Less);
+            }
+        }
+
+        if let Some(o) = self.reverse_orderings.get(&self.number) {
+            if o.contains(&other.number) {
+                return Some(std::cmp::Ordering::Greater);
+            }
+        }
+
+        Some(std::cmp::Ordering::Equal)
+    }
+}
+
+impl<'a> Ord for PageNumber<'a> {
+    fn cmp(&self, other: &Self) -> cmp::Ordering {
+        self.partial_cmp(other).unwrap()
+    }
+}
+
+impl<'a> std::fmt::Debug for PageNumber<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.number)
+    }
+}
+
+pub fn five(data: &Path, part: i64) -> i64 {
+    println!("{:?}", data);
+    let input = fs::read_to_string(data).expect("should be able to read data");
+    let input_parts: Vec<&str> = input.split("\n\n").collect();
+
+    let mut orderings = HashMap::<i64, Vec<i64>>::new();
+    let mut reverse_orderings = HashMap::<i64, Vec<i64>>::new();
+
+    for ordering in input_parts[0].split("\n") {
+        let parts: Vec<i64> = ordering.split("|").map(|s| s.parse().unwrap()).collect();
+        if orderings.contains_key(&parts[0]) {
+            orderings.get_mut(&parts[0]).unwrap().push(parts[1]);
+        } else {
+            orderings.insert(parts[0], vec![parts[1]]);
+        }
+
+        if reverse_orderings.contains_key(&parts[1]) {
+            reverse_orderings.get_mut(&parts[1]).unwrap().push(parts[0]);
+        } else {
+            reverse_orderings.insert(parts[1], vec![parts[0]]);
+        }
+    }
+
+    let mut pages: Vec<Vec<PageNumber>> = input_parts[1]
+        .split("\n")
+        .map(|s| {
+            s.split(",")
+                .map(|i| PageNumber {
+                    number: i.parse().unwrap(),
+                    orderings: &orderings,
+                    reverse_orderings: &reverse_orderings,
+                })
+                .collect()
+        })
+        .collect();
+
+    if part == 1 {
+        pages
+            .iter()
+            .map(|p| {
+                if p.windows(2).all(|w| w[0] <= w[1]) {
+                    p[p.len() / 2].number
+                } else {
+                    0
+                }
+            })
+            .sum()
+    } else {
+        pages
+            .iter_mut()
+            .filter(|p| !p.windows(2).all(|w| w[0] <= w[1]))
+            .map(|p| {
+                p.sort();
+                p[p.len() / 2].number
+            })
+            .sum()
+    }
+}
 
 #[derive(Debug)]
 enum Direction {
