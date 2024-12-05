@@ -3,6 +3,7 @@ use std::{
     fs::{self},
     ops::Index,
     path::Path,
+    thread::panicking,
 };
 
 #[derive(Debug)]
@@ -43,6 +44,13 @@ static DIRECTIONS: [Direction; 8] = [
     Direction::UpLeft,
 ];
 
+static X_PAIRS: [(Direction, Direction); 4] = [
+    (Direction::UpLeft, Direction::DownRight),
+    (Direction::DownRight, Direction::UpLeft),
+    (Direction::UpRight, Direction::DownLeft),
+    (Direction::DownLeft, Direction::UpRight),
+];
+
 struct WordSearch {
     board: Vec<char>,
 
@@ -62,7 +70,7 @@ impl WordSearch {
         }
     }
 
-    fn check_square(&self, x: i64, y: i64) -> i64 {
+    fn check_square_xmas(&self, x: i64, y: i64) -> i64 {
         if self[(x, y)] != 'X' {
             return 0;
         }
@@ -77,11 +85,40 @@ impl WordSearch {
             .fold(0, |acc, b| if b { acc + 1 } else { acc })
     }
 
+    fn check_square_mas_x(&self, x: i64, y: i64) -> i64 {
+        if self[(x, y)] != 'A' {
+            return 0;
+        }
+
+        let crossing = X_PAIRS
+            .iter()
+            .map(|(d1, d2)| {
+                self[d1.get_index(x, y, 1)] == 'M' && self[d2.get_index(x, y, 1)] == 'S'
+            })
+            .fold(0, |acc, b| if b { acc + 1 } else { acc });
+
+        if crossing == 2 {
+            1
+        } else {
+            0
+        }
+    }
+
     fn check_squares(&self) -> i64 {
         (0..self.x as i64)
             .map(|x| {
                 (0..self.y as i64)
-                    .map(|y| self.check_square(x, y))
+                    .map(|y| self.check_square_xmas(x, y))
+                    .sum::<i64>()
+            })
+            .sum()
+    }
+
+    fn check_squares_mas_x(&self) -> i64 {
+        (0..self.x as i64)
+            .map(|x| {
+                (0..self.y as i64)
+                    .map(|y| self.check_square_mas_x(x, y))
                     .sum::<i64>()
             })
             .sum()
@@ -113,7 +150,11 @@ pub fn four(data: &Path, part: i64) -> i64 {
     let wordsearch =
         WordSearch::new(fs::read_to_string(data).expect("should be able to read data"));
 
-    wordsearch.check_squares()
+    if part == 1 {
+        wordsearch.check_squares()
+    } else {
+        wordsearch.check_squares_mas_x()
+    }
 }
 
 #[derive(Debug)]
