@@ -2,6 +2,7 @@ use std::{fs, path::PathBuf};
 
 use clap::Parser;
 
+mod nineteen;
 mod twentyfour;
 
 type DayAction = fn(String, i64) -> i64;
@@ -43,6 +44,10 @@ fn get_day(year: i64, day: i64) -> DayAction {
             4 => twentyfour::four,
             5 => twentyfour::five,
             6 => twentyfour::six,
+            _ => unimplemented!(),
+        },
+        2019 => match day {
+            1 => nineteen::one,
             _ => unimplemented!(),
         },
         _ => unimplemented!(),
