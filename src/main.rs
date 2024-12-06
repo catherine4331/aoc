@@ -1,10 +1,10 @@
-use std::path::{Path, PathBuf};
+use std::{fs, path::PathBuf};
 
 use clap::Parser;
 
 mod twentyfour;
 
-type DayAction = fn(&Path, i64) -> i64;
+type DayAction = fn(String, i64) -> i64;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -26,9 +26,10 @@ fn main() {
     let args = Args::parse();
 
     let data_path = get_data_path(args.year, args.day, args.test);
+    let data = fs::read_to_string(data_path).expect("should be able to read data");
     let action = get_day(args.year, args.day);
 
-    let result = action(data_path.as_path(), args.part);
+    let result = action(data, args.part);
 
     println!("{}", result)
 }
@@ -41,6 +42,7 @@ fn get_day(year: i64, day: i64) -> DayAction {
             3 => twentyfour::three,
             4 => twentyfour::four,
             5 => twentyfour::five,
+            6 => twentyfour::six,
             _ => unimplemented!(),
         },
         _ => unimplemented!(),

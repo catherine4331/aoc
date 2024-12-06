@@ -1,10 +1,118 @@
 use std::{
     cmp,
-    collections::HashMap,
-    fs::{self},
+    collections::{HashMap, HashSet},
     ops::Index,
-    path::Path,
 };
+
+#[derive(Debug)]
+struct Map {
+    obstacles: HashSet<(i64, i64)>,
+    visited: HashMap<(i64, i64), HashSet<Direction>>,
+
+    x: i64,
+    y: i64,
+
+    position: (i64, i64),
+    facing: Direction,
+}
+
+impl Map {
+    fn new(raw_map: &String) -> Self {
+        let lines: Vec<&str> = raw_map.split("\n").collect();
+
+        let mut obstacles = HashSet::new();
+        let mut position = (0, 0);
+        for (i, line) in lines.iter().enumerate() {
+            for (j, char) in line.chars().enumerate() {
+                if char == '#' {
+                    obstacles.insert((i as i64, j as i64));
+                } else if char == '^' {
+                    position = (i as i64, j as i64);
+                }
+            }
+        }
+
+        Self {
+            obstacles,
+            visited: HashMap::new(),
+            x: lines[0].len() as i64,
+            y: lines.len() as i64,
+            position,
+            facing: Direction::Up,
+        }
+    }
+
+    fn insert_visited(&mut self, position: (i64, i64), facing: Direction) {
+        if self.visited.contains_key(&position) {
+            self.visited.get_mut(&position).unwrap().insert(facing);
+        } else {
+            let mut set = HashSet::new();
+            set.insert(facing);
+            self.visited.insert(position, set);
+        }
+    }
+
+    fn next(&mut self) -> bool {
+        self.insert_visited(self.position, self.facing);
+
+        let next_position = self.facing.get_index(self.position.0, self.position.1, 1);
+        if next_position.0 < 0
+            || next_position.1 < 0
+            || next_position.0 >= self.x
+            || next_position.1 >= self.y
+        {
+            false
+        } else if self.obstacles.contains(&next_position) {
+            self.facing = self.facing.turn_right_90();
+
+            true
+        } else {
+            self.position = next_position;
+
+            true
+        }
+    }
+
+    fn visited(&self, position: (i64, i64), facing: Direction) -> bool {
+        match self.visited.get(&position) {
+            Some(s) => s.contains(&facing),
+            None => false,
+        }
+    }
+
+    fn try_obstacle(&mut self, obstacle_position: (i64, i64)) -> bool {
+        self.obstacles.insert(obstacle_position);
+
+        while self.next() {
+            if self.visited(self.position, self.facing) {
+                return true;
+            }
+        }
+
+        false
+    }
+}
+
+pub fn six(data: String, part: i64) -> i64 {
+    let mut map = Map::new(&data);
+    let initial_position = map.position;
+
+    if part == 1 {
+        while map.next() {}
+        map.visited.len() as i64
+    } else {
+        while map.next() {}
+        map.visited.remove(&initial_position);
+
+        map.visited
+            .iter()
+            .map(|v| {
+                let mut map = Map::new(&data);
+                map.try_obstacle(*v.0)
+            })
+            .fold(0, |acc, v| if v { acc + 1 } else { acc })
+    }
+}
 
 #[derive(PartialEq, Eq)]
 struct PageNumber<'a> {
@@ -43,15 +151,13 @@ impl<'a> std::fmt::Debug for PageNumber<'a> {
     }
 }
 
-pub fn five(data: &Path, part: i64) -> i64 {
-    println!("{:?}", data);
-    let input = fs::read_to_string(data).expect("should be able to read data");
-    let input_parts: Vec<&str> = input.split("\n\n").collect();
+pub fn five(data: String, part: i64) -> i64 {
+    let input: Vec<&str> = data.split("\n\n").collect();
 
     let mut orderings = HashMap::<i64, Vec<i64>>::new();
     let mut reverse_orderings = HashMap::<i64, Vec<i64>>::new();
 
-    for ordering in input_parts[0].split("\n") {
+    for ordering in input[0].split("\n") {
         let parts: Vec<i64> = ordering.split("|").map(|s| s.parse().unwrap()).collect();
         if orderings.contains_key(&parts[0]) {
             orderings.get_mut(&parts[0]).unwrap().push(parts[1]);
@@ -66,7 +172,7 @@ pub fn five(data: &Path, part: i64) -> i64 {
         }
     }
 
-    let mut pages: Vec<Vec<PageNumber>> = input_parts[1]
+    let mut pages: Vec<Vec<PageNumber>> = input[1]
         .split("\n")
         .map(|s| {
             s.split(",")
@@ -102,7 +208,7 @@ pub fn five(data: &Path, part: i64) -> i64 {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 enum Direction {
     Up,
     UpRight,
@@ -125,6 +231,19 @@ impl Direction {
             Direction::DownLeft => (x + n, y - n),
             Direction::Right => (x, y + n),
             Direction::Left => (x, y - n),
+        }
+    }
+
+    fn turn_right_90(&self) -> Self {
+        match self {
+            Direction::Up => Direction::Right,
+            Direction::UpRight => Direction::DownRight,
+            Direction::Right => Direction::Down,
+            Direction::DownRight => Direction::DownLeft,
+            Direction::Down => Direction::Left,
+            Direction::DownLeft => Direction::UpLeft,
+            Direction::Left => Direction::Up,
+            Direction::UpLeft => Direction::UpRight,
         }
     }
 }
@@ -242,9 +361,8 @@ impl Index<(i64, i64)> for WordSearch {
     }
 }
 
-pub fn four(data: &Path, part: i64) -> i64 {
-    let wordsearch =
-        WordSearch::new(fs::read_to_string(data).expect("should be able to read data"));
+pub fn four(data: String, part: i64) -> i64 {
+    let wordsearch = WordSearch::new(data);
 
     if part == 1 {
         wordsearch.check_squares()
@@ -377,11 +495,8 @@ impl MulParser {
     }
 }
 
-pub fn three(data: &Path, part: i64) -> i64 {
-    let chars = fs::read_to_string(data)
-        .expect("should be able to read data")
-        .chars()
-        .collect();
+pub fn three(data: String, part: i64) -> i64 {
+    let chars = data.chars().collect();
     let mut parser = MulParser::new(chars);
 
     let mut total = 0;
@@ -396,7 +511,7 @@ pub fn three(data: &Path, part: i64) -> i64 {
     total
 }
 
-pub fn two(data: &Path, part: i64) -> i64 {
+pub fn two(data: String, part: i64) -> i64 {
     fn safe_p1(report: Vec<i64>) -> bool {
         if report[0] == report[1] {
             return false;
@@ -430,9 +545,7 @@ pub fn two(data: &Path, part: i64) -> i64 {
 
     let safe = if part == 1 { safe_p1 } else { safe_p2 };
 
-    fs::read_to_string(data)
-        .expect("should be able to read data")
-        .split("\n")
+    data.split("\n")
         .map(|l| {
             l.split(' ')
                 .map(|s| s.parse().unwrap())
@@ -442,9 +555,8 @@ pub fn two(data: &Path, part: i64) -> i64 {
         .fold(0, |acc, b| if b { acc + 1 } else { acc })
 }
 
-pub fn one(data: &Path, part: i64) -> i64 {
-    let mut locations: (Vec<i64>, Vec<i64>) = fs::read_to_string(data)
-        .expect("should be able to read data")
+pub fn one(data: String, part: i64) -> i64 {
+    let mut locations: (Vec<i64>, Vec<i64>) = data
         .split('\n')
         .map(|l| {
             let parts: Vec<&str> = l.split("   ").collect();
