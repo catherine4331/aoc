@@ -6,6 +6,55 @@ use std::{
 
 use crate::direction::Direction;
 
+enum Op {
+    Add,
+    Mult,
+    Concat,
+}
+
+fn check_calibration(target: i64, inputs: Vec<i64>) -> bool {
+    (0..(3_i64.pow(inputs.len() as u32 - 1)))
+        .map(|i| {
+            inputs
+                .iter()
+                .skip(1)
+                .enumerate()
+                .fold(inputs[0], |acc, (pos, v)| {
+                    match get_operation(i, pos as u32) {
+                        Op::Add => acc + v,
+                        Op::Mult => acc * v,
+                        Op::Concat => format!("{}{}", acc, v).parse().unwrap(),
+                    }
+                })
+        })
+        .any(|v| v == target)
+}
+
+fn get_operation(i: i64, pos: u32) -> Op {
+    match (i / 3_i64.pow(pos)) % 3 {
+        0 => Op::Add,
+        1 => Op::Mult,
+        2 => Op::Concat,
+        _ => unreachable!(),
+    }
+}
+
+pub fn seven(data: String, _: i64) -> i64 {
+    data.split("\n")
+        .map(|l| {
+            let parts: Vec<&str> = l.split(": ").collect();
+            let target = parts[0].parse().unwrap();
+            let inputs: Vec<i64> = parts[1].split(" ").map(|i| i.parse().unwrap()).collect();
+
+            if check_calibration(target, inputs) {
+                target
+            } else {
+                0
+            }
+        })
+        .sum()
+}
+
 #[derive(Debug)]
 struct Map {
     obstacles: HashSet<(i64, i64)>,

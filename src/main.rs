@@ -46,6 +46,7 @@ fn get_day(year: i64, day: i64) -> DayAction {
             4 => twentyfour::four,
             5 => twentyfour::five,
             6 => twentyfour::six,
+            7 => twentyfour::seven,
             _ => unimplemented!(),
         },
         2019 => match day {

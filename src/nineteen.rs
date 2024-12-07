@@ -10,7 +10,7 @@ fn generate_wire_points(start: Point, length: i64, direction: Direction) -> Vec<
         .collect()
 }
 
-pub fn three(data: String, part: i64) -> i64 {
+pub fn three(data: String, _: i64) -> i64 {
     let wires: Vec<Wire> = data
         .split("\n")
         .map(|s| {
