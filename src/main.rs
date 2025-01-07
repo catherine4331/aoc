@@ -21,7 +21,7 @@ struct Args {
     #[clap(long, short, action, default_value_t = 1)]
     part: i64,
 
-    #[clap(long, short, action)]
+    #[clap(long, short, acdion)]
     test: bool,
 }
 
@@ -47,6 +47,7 @@ fn get_day(year: i64, day: i64) -> DayAction {
             5 => twentyfour::five,
             6 => twentyfour::six,
             7 => twentyfour::seven,
+            8 => unimplemented!(),
             _ => unimplemented!(),
         },
         2019 => match day {
